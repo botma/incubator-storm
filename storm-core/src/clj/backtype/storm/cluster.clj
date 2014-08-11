@@ -428,12 +428,14 @@
 ;; start with initialize event
 ;; callbacks add events to the thread's queue
 
-;; keeps in memory cache of the state, only for what client subscribes to. Any subscription is automatically kept in sync, and when there are changes, client is notified.
+;; keeps in memory cache of the state, only for what client subscribes to.
+;;    Any subscription is automatically kept in sync,and when there are changes, client is notified.
 ;; master gives orders through state, and client records status in state (ephemerally)
 
 ;; master tells nodes what workers to launch
 
-;; master writes this. supervisors and workers subscribe to this to understand complete topology. each storm is a map from nodes to workers to tasks to ports whenever topology changes everyone will be notified
+;; master writes this. supervisors and workers subscribe to this to understand complete topology. 
+;;   each storm is a map from nodes to workers to tasks to ports whenever topology changes everyone will be notified
 ;; master includes timestamp of each assignment so that appropriate time can be given to each worker to start up
 ;; /assignments/{storm id}
 

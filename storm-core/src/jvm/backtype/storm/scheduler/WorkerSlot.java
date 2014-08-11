@@ -18,7 +18,7 @@
 package backtype.storm.scheduler;
 
 public class WorkerSlot {
-    String nodeId;
+    String nodeId; //supervisorid
     int port;
     
     public WorkerSlot(String nodeId, Number port) {

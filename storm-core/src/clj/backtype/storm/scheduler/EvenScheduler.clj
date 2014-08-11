@@ -21,11 +21,13 @@
   (:gen-class
     :implements [backtype.storm.scheduler.IScheduler]))
 
+
 (defn sort-slots [all-slots]
-  (let [split-up (vals (group-by first all-slots))]
+  (let [split-up (vals (group-by first all-slots))]  ;; group-by '([:a 1] [:a 2]) == > {:a [[:a 1] [:a 2]}
     (apply interleave-all split-up)
     ))
 
+;;返回assignment中getExecutorToSlot的键值反转的map
 (defn get-alive-assigned-node+port->executors [cluster topology-id]
   (let [existing-assignment (.getAssignmentById cluster topology-id)
         executor->slot (if existing-assignment

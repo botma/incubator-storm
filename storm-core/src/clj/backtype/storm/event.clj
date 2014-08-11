@@ -24,6 +24,7 @@
   (waiting? [this])
   (shutdown [this]))
 
+;; 维持一个事件处理器的队列，队列里面放的都是函数
 (defn event-manager
   "Creates a thread to respond to events. Any error will cause process to halt"
   [daemon?]
@@ -51,7 +52,7 @@
       (add
         [this event-fn]
         ;; should keep track of total added and processed to know if this is finished yet
-        (when-not @running
+       (when-not @running
           (throw (RuntimeException. "Cannot add events to a shutdown event manager")))
         (swap! added inc)
         (.put queue event-fn))

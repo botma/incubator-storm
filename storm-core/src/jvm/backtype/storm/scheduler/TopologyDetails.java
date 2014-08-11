@@ -29,7 +29,8 @@ public class TopologyDetails {
     String topologyId;
     Map topologyConf;
     StormTopology topology;
-    Map<ExecutorDetails, String> executorToComponent;
+    
+    Map<ExecutorDetails, String> executorToComponent;//需要被调度的
     int numWorkers;
  
     public TopologyDetails(String topologyId, Map topologyConf, StormTopology topology, int numWorkers) {

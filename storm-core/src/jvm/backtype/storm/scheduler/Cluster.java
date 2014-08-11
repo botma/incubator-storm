@@ -37,6 +37,7 @@ public class Cluster {
     private Map<String, SchedulerAssignmentImpl> assignments;
 
     /**
+     * TODO 不是一个机器一个supervisor吗
      * a map from hostname to supervisor id.
      */
     private Map<String, List<String>>        hostToId;
@@ -288,6 +289,7 @@ public class Cluster {
             assignment = new SchedulerAssignmentImpl(topologyId, new HashMap<ExecutorDetails, WorkerSlot>());
             this.assignments.put(topologyId, assignment);
         } else {
+        	//这里有可能有机器挂了，需要将他们重新分配到新的workerSlot
             for (ExecutorDetails executor : executors) {
                  if (assignment.isExecutorAssigned(executor)) {
                      throw new RuntimeException("the executor is already assigned, you should unassign it before assign it to another slot.");

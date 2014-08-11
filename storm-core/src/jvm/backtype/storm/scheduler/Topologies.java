@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Topologies {
-    Map<String, TopologyDetails> topologies;
+    Map<String/* id */, TopologyDetails> topologies;
     Map<String, String> nameToId;
     
     public Topologies(Map<String, TopologyDetails> topologies) {

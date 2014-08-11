@@ -28,6 +28,7 @@
   (.replace (.toUpperCase name) "_" "-"))
 
 ;; define clojure constants for every configuration parameter
+;;将所有Config里面的字段转换为clojure的方式，即将_转换为-
 (doseq [f (seq (.getFields Config))]
   (let [name (.getName f)
         new-name (clojure-config-name name)]

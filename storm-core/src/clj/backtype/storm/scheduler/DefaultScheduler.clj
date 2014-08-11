@@ -28,9 +28,9 @@
     (let [distribution (atom (integer-divided num-executors num-workers))
           keepers (atom {})]
       (doseq [[node+port executor-list] existing-slots :let [executor-count (count executor-list)]]
-        (when (pos? (get @distribution executor-count 0))
-          (swap! keepers assoc node+port executor-list)
-          (swap! distribution update-in [executor-count] dec)
+        (when (pos? (get @distribution executor-count 0)) ;;对应workerslot中的execut个数在distribution的除法中有值
+          (swap! keepers assoc node+port executor-list)   ;;保留这个workerslot的executor
+          (swap! distribution update-in [executor-count] dec) ;;将对应的值减1
           ))
       (->> @keepers
            keys
@@ -39,6 +39,8 @@
            (map (fn [[node port]]
                   (WorkerSlot. node port)))))))
 
+
+;;正常的supervisor和端口都可以reassign
 (defn slots-can-reassign [^Cluster cluster slots]
   (->> slots
       (filter
@@ -56,15 +58,15 @@
     (doseq [^TopologyDetails topology needs-scheduling-topologies
             :let [topology-id (.getId topology)
                   available-slots (->> (.getAvailableSlots cluster)
-                                       (map #(vector (.getNodeId %) (.getPort %))))
-                  all-executors (->> topology
+                                       (map #(vector (.getNodeId %) (.getPort %)))) ;;将workerSlot转换为 [nodeid,port]
+                  all-executors (->> topology     ;; 该topology需要的executor
                                      .getExecutors
-                                     (map #(vector (.getStartTask %) (.getEndTask %)))
+                                     (map #(vector (.getStartTask %) (.getEndTask %))) ;; 转换为 [start,end]
                                      set)
                   alive-assigned (EvenScheduler/get-alive-assigned-node+port->executors cluster topology-id)
                   alive-executors (->> alive-assigned vals (apply concat) set)
                   can-reassign-slots (slots-can-reassign cluster (keys alive-assigned))
-                  total-slots-to-use (min (.getNumWorkers topology)
+                  total-slots-to-use (min (.getNumWorkers topology)  ;;可用的workerslot
                                           (+ (count can-reassign-slots) (count available-slots)))
                   bad-slots (if (or (> total-slots-to-use (count alive-assigned)) 
                                     (not= alive-executors all-executors))

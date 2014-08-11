@@ -73,6 +73,8 @@
    (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig)))
 
 ;; name-with-attributes by Konrad Hinsen:
+;; 将函数定义中的，注释，元数据给添加到函数名的symbol中，返回纯净的函数定义式
+;; 返回值：[function-name ([args] bodys)]
 (defn name-with-attributes
   "To be used in macro definitions.
   Handles optional docstrings and attribute maps for a name to be defined
@@ -107,14 +109,17 @@
   defnk accepts an optional docstring as well as an optional metadata map."
   [fn-name & fn-tail]
   (let [[fn-name [args & body]] (name-with-attributes fn-name fn-tail)
-        [pos kw-vals] (split-with symbol? args)
-        syms (map #(-> % name symbol) (take-nth 2 kw-vals))
-        values (take-nth 2 (rest kw-vals))
+        [pos kw-vals] (split-with symbol? args)  ;args 中前半部分是普通的参数symbol，后部是键值对参数
+        syms (map #(-> % name symbol) (take-nth 2 kw-vals)) ;取出所有的键，并将其转换为symbol
+        values (take-nth 2 (rest kw-vals))   ;取出所有的值
         sym-vals (apply hash-map (interleave syms values))
-        de-map {:keys (vec syms) :or sym-vals}]
+        de-map {:keys (vec syms) :or sym-vals}] ;为后续函数定义中的let准备
+    #_(do (println (name-with-attributes fn-name fn-tail))
+       (println pos "\n\n" kw-vals) 
+       (println de-map) )
     `(defn ~fn-name
        [~@pos & options#]
-       (let [~de-map (apply hash-map options#)]
+      (let [~de-map (apply hash-map options#)]
          ~@body))))
 
 (defn find-first
@@ -182,6 +187,7 @@
              ~@body)
            ~aseq))
 
+;; TODO 这和自带的异常有什么区别吗，而且还多了一个condition分发
 (defmacro try-cause
   [& body]
   (let [checker (fn [form]
@@ -233,6 +239,7 @@
   (long (* (long 1000) secs)))
 
 (defn clojurify-structure
+  "将java 的map和list转为为clojure的map和vector" 
   [s]
   (prewalk (fn [x]
              (cond (instance? Map x) (into {} x)
@@ -352,7 +359,7 @@
   `(doall (for ~@body)))
 
 (defn reverse-map
-  "{:a 1 :b 1 :c 2} -> {1 [:a :b] 2 :c}"
+  "{:a 1 :b 1 :c 2} -> {1 [:a :b] 2 [:c]}"
   [amap]
   (reduce (fn [m [k v]]
             (let [existing (get m v [])]

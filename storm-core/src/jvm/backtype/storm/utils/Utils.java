@@ -419,9 +419,13 @@ public class Utils {
       {base num-bases}
       {base num-bases (inc base) num-inc}
       )))
+      
+      TODO WTF is this for
      * @param sum
      * @param numPieces
      * @return 
+     * 	[商，除数-余数]
+     * 	[商+1，余数]
      */
     
     public static TreeMap<Integer, Integer> integerDivided(int sum, int numPieces) {
