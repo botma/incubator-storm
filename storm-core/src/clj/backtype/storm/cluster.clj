@@ -152,7 +152,7 @@
   (disconnect [this]))
 
 (def ASSIGNMENTS-ROOT "assignments")
-(def CODE-ROOT "code")
+#_(def CODE-ROOT "code")
 (def STORMS-ROOT "storms")
 (def SUPERVISORS-ROOT "supervisors")
 (def WORKERBEATS-ROOT "workerbeats")
@@ -255,7 +255,7 @@
                          ;; this should never happen
                          (exit-process! 30 "Unknown callback for subtree " subtree args)))))]
     (doseq [p [ASSIGNMENTS-SUBTREE STORMS-SUBTREE SUPERVISORS-SUBTREE WORKERBEATS-SUBTREE ERRORS-SUBTREE]]
-      (mkdirs cluster-state p))
+      (mkdirs cluster-state p)) ;;构建zookeeper上的目录结构
     (reify
       StormClusterState
 
@@ -354,14 +354,14 @@
             (log-warn-error e "Could not teardown errors for " storm-id))))
 
       (supervisor-heartbeat!
-        [this supervisor-id info]
+        [this supervisor-id info] ;;info = SupervisorInfo
         (set-ephemeral-node cluster-state (supervisor-path supervisor-id) (Utils/serialize info)))
 
       (activate-storm!
         [this storm-id storm-base]
         (set-data cluster-state (storm-path storm-id) (Utils/serialize storm-base)))
 
-      (update-storm!
+      (update-storm! ;; 先取出stormbase的值，在添加对应的key-value 最后序列化回去
         [this storm-id new-elems]
         (let [base (storm-base this storm-id nil)
               executors (:component->executors base)

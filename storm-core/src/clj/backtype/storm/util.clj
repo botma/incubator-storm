@@ -850,11 +850,16 @@
   [curr key afn]
   (assoc curr key (afn curr)))
 
+;;比如说
+;;  (recursive-map :transfer-fn (mk-transfer-fn <>))
+;; ==> (assoc-apply-self {} :transfer-fn (fn [<>] (mk-transfer-fn <>)))
 (defmacro recursive-map
+  "build a map whose value use some of previous values,excellent"
   [& forms]
   (->> (partition 2 forms)
-       (map (fn [[key form]] `(assoc-apply-self ~key (fn [~'<>] ~form))))
-       (concat `(-> {}))))
+       (map (fn [[key form]] `(assoc-apply-self ~key (fn [~'<>] ~form)))) ;参数~'<>就是一个capture
+      ;;这里的assoc-aply-self是不执行的，会在下一步的concat中执行
+      (concat `(-> {}))))
 
 (defn current-stack-trace
   []

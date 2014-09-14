@@ -480,7 +480,8 @@
                                                          (tasks-fn out-task-id out-stream-id values)
                                                          (tasks-fn out-stream-id values))
                                              rooted? (and message-id has-ackers?)
-                                             root-id (if rooted? (MessageId/generateId rand))
+                                             root-id (if rooted? (MessageId/generateId rand));;每个只有一个rootid
+                                             ;;每个输出的tuple一个新的id
                                              out-ids (fast-list-for [t out-tasks] (if rooted? (MessageId/generateId rand)))]
                                          (fast-list-iter [out-task out-tasks id out-ids]
                                                          (let [tuple-id (if rooted?
@@ -502,8 +503,9 @@
                                                                     {:stream out-stream-id :values values}
                                                                     (if (sampler) (System/currentTimeMillis))])
                                              (task/send-unanchored task-data
-                                                                   ACKER-INIT-STREAM-ID
-                                                                   [root-id (bit-xor-vals out-ids) task-id]
+                                                                   ACKER-INIT-STREAM-ID ;初始化ack的消息
+                                                                   ;;将所有的需要ack的从这里发送出去的id做一个xor
+                                                                   [root-id (bit-xor-vals out-ids) task-id] 
                                                                    overflow-buffer))
                                            (when message-id
                                              (ack-spout-msg executor-data task-data message-id
@@ -530,12 +532,17 @@
                       )
                     (reportError [this error]
                       (report-error error)
-                      )))))
+                      ))))) 
+        ;;end doseq
+        
         (reset! open-or-prepare-was-called? true) 
         (log-message "Opened spout " component-id ":" (keys task-datas))
         (setup-metrics! executor-data)
         
+        ;; 为什么spout会需要recieve-queue,用来收集metric
         (disruptor/consumer-started! (:receive-queue executor-data))
+        
+        ;因为factory==true，asyncloop会调用上一层的函数获得返回值函数，以返回值函数作为运行的主要对象
         (fn []
           ;; This design requires that spouts be non-blocking
           (disruptor/consume-batch receive-queue event-handler)
@@ -573,8 +580,9 @@
               (do (.increment empty-emit-streak)
                   (.emptyEmit spout-wait-strategy (.get empty-emit-streak)))
               (.set empty-emit-streak 0)
-              ))           
-          0))
+              ))  
+          ;;返回值，表示随眠多少秒后在重新运行，见asyncloop
+          0)) 
       :kill-fn (:report-error-and-die executor-data)
       :factory? true
       :thread-name component-id)]))
@@ -666,7 +674,10 @@
                                                                       (let [root-ids (-> a .getMessageId .getAnchorsToIds .keySet)]
                                                                         (when (pos? (count root-ids))
                                                                           (let [edge-id (MessageId/generateId rand)]
-                                                                            (.updateAckVal a edge-id)
+                                                                            (.updateAckVal a edge-id);增加了新的需要ack的id
+                                                                            
+                                                                            ;;这里像spout那样将异或更新祖先id，
+                                                                            ;;不过好像没必要循环，代码只有一个rootid,除非客户端合并多个tuple一起ack。
                                                                             (fast-list-iter [root-id root-ids]
                                                                                             (put-xor! anchors-to-ids root-id edge-id))
                                                                             ))))

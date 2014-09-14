@@ -29,7 +29,7 @@ public interface INimbus {
      */
     Collection<WorkerSlot> allSlotsAvailableForScheduling(Collection<SupervisorDetails> existingSupervisors, Topologies topologies, Set<String> topologiesMissingAssignments);
 
-    // this is called after the assignment is changed in ZK
+    // this is called after the assignment is changed in ZK，就像一个callback，还没有用
     void assignSlots(Topologies topologies, Map<String, Collection<WorkerSlot>> newSlotsByTopologyId);
     
     // map from node id to supervisor details

@@ -169,6 +169,7 @@
              out-tasks)))
     ))
 
+;每个executor：[starttask, endtask];
 (defn mk-task-data [executor-data task-id]
   (recursive-map
     :executor-data executor-data

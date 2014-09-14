@@ -25,7 +25,7 @@
   (:require [backtype.storm.daemon.acker :as acker])
   (:require [backtype.storm.thrift :as thrift])
   )
-
+;;以__开头的都是system保留的
 (defn system-id? [id]
   (Utils/isSystemId id))
 

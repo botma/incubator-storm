@@ -24,6 +24,7 @@
 ;; it integrates with Storm's time simulation capabilities. This lets us test
 ;; code that does asynchronous work on the timer thread
 
+;;clojure 以函数为单位处理，一般要暴露函数内部变量的话，会返回一个map
 (defnk mk-timer [:kill-fn (fn [& _] ) :timer-name nil]
   (let [queue (PriorityQueue. 10 (reify Comparator
                                    (compare
@@ -43,28 +44,28 @@
                              (let [[time-millis _ _ :as elem] (locking lock (.peek queue))]
                                (if (and elem (>= (current-time-millis) time-millis))
                                  ;; It is imperative to not run the function
-                                 ;; inside the timer lock. Otherwise, it is
-                                 ;; possible to deadlock if the fn deals with
-                                 ;; other locks, like the submit lock.
-                                 (let [afn (locking lock (second (.poll queue)))]
+                             ;; inside the timer lock. Otherwise, it is
+                             ;; possible to deadlock if the fn deals with
+                             ;; other locks, like the submit lock.
+                             (let [afn (locking lock (second (.poll queue)))]
                                    (afn))
                                  (if time-millis
                                    ;; If any events are scheduled, sleep until
-                                   ;; event generation. If any recurring events
-                                   ;; are scheduled then we will always go
-                                   ;; through this branch, sleeping only the
-                                   ;; exact necessary amount of time.
-                                   (Time/sleep (- time-millis (current-time-millis)))
+                               ;; event generation. If any recurring events
+                               ;; are scheduled then we will always go
+                               ;; through this branch, sleeping only the
+                               ;; exact necessary amount of time.
+                               (Time/sleep (- time-millis (current-time-millis)))
                                    ;; Otherwise poll to see if any new event
-                                   ;; was scheduled. This is, in essence, the
-                                   ;; response time for detecting any new event
-                                   ;; schedulings when there are no scheduled
-                                   ;; events.
-                                   (Time/sleep 1000))))
+                               ;; was scheduled. This is, in essence, the
+                               ;; response time for detecting any new event
+                               ;; schedulings when there are no scheduled
+                               ;; events.
+                               (Time/sleep 1000))))
                              (catch Throwable t
                                ;; Because the interrupted exception can be
-                               ;; wrapped in a RuntimeException.
-                               (when-not (exception-cause? InterruptedException t)
+                           ;; wrapped in a RuntimeException.
+                           (when-not (exception-cause? InterruptedException t)
                                  (kill-fn t)
                                  (reset! active false)
                                  (throw t)))))

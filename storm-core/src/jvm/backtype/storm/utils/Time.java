@@ -24,7 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+/**
+ * 时间模拟器，如果没有模拟的话，会转调java的time
+ *
+ */
 public class Time {
     public static Logger LOG = LoggerFactory.getLogger(Time.class);    
     

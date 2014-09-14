@@ -38,7 +38,7 @@
   )
 
 (defn- assignments-snapshot [storm-cluster-state callback assignment-versions]
-  (let [storm-ids (.assignments storm-cluster-state callback)]
+  (let [storm-ids (.assignments storm-cluster-state callback)] ;; callback:当对应assignment有变动是会得到通知。
     (let [new-assignments 
           (->>
            (dofor [sid storm-ids] 
@@ -51,7 +51,7 @@
            (apply merge)
            (filter-val not-nil?))]
           
-      {:assignments (into {} (for [[k v] new-assignments] [k (:data v)]))
+      {:assignments (into {} (for [[k v] new-assignments] [k (:data v)])) ;; data 就是zk assignment/storm-id的数据  ：Assignment
        :versions new-assignments})))
   
 (defn- read-my-executors [assignments-snapshot storm-id assignment-id]
@@ -73,6 +73,7 @@
   "Returns map from port to struct containing :storm-id and :executors"
   ([assignments-snapshot assignment-id]
      (->> (dofor [sid (keys assignments-snapshot)] (read-my-executors assignments-snapshot sid assignment-id))
+           ;; 竟然可以这样用merge-with，厉害
           (apply merge-with (fn [& ignored] (throw-runtime "Should not have multiple topologies assigned to one port")))))
   ([assignments-snapshot assignment-id existing-assignment retries]
      (try (let [assignments (read-assignments assignments-snapshot assignment-id)]
@@ -210,8 +211,8 @@
    :worker-thread-pids-atom (atom {})
    :storm-cluster-state (cluster/mk-storm-cluster-state conf)
    :local-state (supervisor-state conf)
-   :supervisor-id (.getSupervisorId isupervisor)
-   :assignment-id (.getAssignmentId isupervisor)
+   :supervisor-id (.getSupervisorId isupervisor) 
+   :assignment-id (.getAssignmentId isupervisor) ;;same as :supervisor-id
    :my-hostname (if (contains? conf STORM-LOCAL-HOSTNAME)
                   (conf STORM-LOCAL-HOSTNAME)
                   (local-hostname))
@@ -220,7 +221,7 @@
                                (log-error t "Error when processing event")
                                (exit-process! 20 "Error when processing an event")
                                ))
-   :assignment-versions (atom {})
+   :assignment-versions (atom {}) ;; zookeeper中的对应数据的version
    :sync-retry (atom 0)
    })
 
@@ -400,8 +401,7 @@
                                (SupervisorInfo. (current-time-secs)
                                                 (:my-hostname supervisor)
                                                 (:assignment-id supervisor)
-                                                (keys @(:curr-assignment supervisor))
-                                                ;; used ports
+                                                (keys @(:curr-assignment supervisor)) ;used ports
                                                 (.getMetadata isupervisor)
                                                 (conf SUPERVISOR-SCHEDULER-META)
                                                 ((:uptime supervisor)))))]

@@ -252,7 +252,7 @@
       ([]
         (this (fn [& ignored] (schedule (:refresh-connections-timer worker) 0 this))))
       ([callback]
-         (let [version (.assignment-version storm-cluster-state storm-id callback)
+         (let [version (.assignment-version storm-cluster-state storm-id callback) ;;在assignment变更的时候，还能自动refresh
                assignment (if (= version (:version (get @(:assignment-versions worker) storm-id)))
                             (:data (get @(:assignment-versions worker) storm-id))
                             (let [new-assignment (.assignment-info-with-version storm-cluster-state storm-id callback)]
@@ -381,7 +381,7 @@
         _ (refresh-storm-active worker nil)
  
         _ (reset! executors (dofor [e (:executors worker)] (executor/mk-executor worker e)))
-        receive-thread-shutdown (launch-receive-thread worker)
+        receive-thread-shutdown (launch-receive-thread worker) ;; 接收监听的线程应该先启动，不然上一个的refresh-connection会进行重试。
         
         transfer-tuples (mk-transfer-tuples-handler worker)
         
@@ -456,6 +456,7 @@
   :distributed [conf]
   (fn [] (exit-process! 1 "Worker died")))
 
+;;  assignment-id指的是什么-->就是supervisor-id
 (defn -main [storm-id assignment-id port-str worker-id]  
   (let [conf (read-storm-config)]
     (validate-distributed-mode! conf)

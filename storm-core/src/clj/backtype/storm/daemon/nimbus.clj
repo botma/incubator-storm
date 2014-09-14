@@ -41,6 +41,7 @@
                   ))
    ))
 
+;;构建调度器，要不是default，要不是从用户的配置文件中的storm.scheduler的配置项
 (defn mk-scheduler [conf inimbus]
   (let [forced-scheduler (.getForcedScheduler inimbus)
         scheduler (cond
@@ -60,8 +61,8 @@
     ))
 
 (defn nimbus-data [conf inimbus]
-  (let [forced-scheduler (.getForcedScheduler inimbus)]
-    {:conf conf
+  (let [forced-scheduler (.getForcedScheduler inimbus)] ;;这里的没用
+     {:conf conf
      :inimbus inimbus
      :submitted-count (atom 0)
      :storm-cluster-state (cluster/mk-storm-cluster-state conf)
@@ -140,6 +141,7 @@
                     (:num-workers status)))
   (mk-assignments nimbus :scratch-topology-id storm-id))
 
+;; {当前status {操作type value}}
 (defn state-transitions [nimbus storm-id status]
   {:active {:inactivate :inactive            
             :activate nil
@@ -256,8 +258,7 @@
 (defn- assigned-slots
   "Returns a map from node-id to a set of ports"
   [storm-cluster-state]
-  (let [assignments (.assignments storm-cluster-state nil)
-        ]
+  (let [assignments (.assignments storm-cluster-state nil) ]
     (defaulted
       (apply merge-with set/union
              (for [a assignments
@@ -268,10 +269,11 @@
     ))
 
 (defn- all-supervisor-info
+  "return a map : {supervisor-id supervisorInfo}" 
   ([storm-cluster-state] (all-supervisor-info storm-cluster-state nil))
-  ([storm-cluster-state callback]
-     (let [supervisor-ids (.supervisors storm-cluster-state callback)]
-       (into {}
+  ([storm-cluster-state callback] ;;call back always nil
+     (let [supervisor-ids (.supervisors storm-cluster-state callback)] ;;获取zookeeper supervisor子节点名
+       (into {} ;各个supervisor数据，见SupervisorInfo
              (mapcat
               (fn [id]
                 (if-let [info (.supervisor-info storm-cluster-state id)]
@@ -548,7 +550,7 @@
   (let [conf (:conf nimbus)
         storm-cluster-state (:storm-cluster-state nimbus)
         topology->executors (compute-topology->executors nimbus (keys existing-assignments))
-        ;; update the executors heartbeats first.
+        ;; update the executors heartbeats first. 
         _ (update-all-heartbeats! nimbus existing-assignments topology->executors)
         topology->alive-executors (compute-topology->alive-executors nimbus
                                                                      existing-assignments
@@ -644,12 +646,12 @@
         storm-cluster-state (:storm-cluster-state nimbus)
         ^INimbus inimbus (:inimbus nimbus) 
         ;; read all the topologies
-        topology-ids (.active-storms storm-cluster-state)
+        topology-ids (.active-storms storm-cluster-state) ;zookeeper下  /storm子节点的名字：topology-id
         topologies (into {} (for [tid topology-ids]
-                              {tid (read-topology-details nimbus tid)}))
+                              {tid (read-topology-details nimbus tid)})) 
         topologies (Topologies. topologies)
         ;; read all the assignments
-        assigned-topology-ids (.assignments storm-cluster-state nil)
+        assigned-topology-ids (.assignments storm-cluster-state nil) ;获得zookeeper assignment自己节点名 topology-id
         existing-assignments (into {} (for [tid assigned-topology-ids]
                                         ;; for the topology which wants rebalance (specified by the scratch-topology-id)
                                         ;; we exclude its assignment, meaning that all the slots occupied by its assignment
@@ -724,7 +726,7 @@
                       (StormBase. storm-name
                                   (current-time-secs)
                                   {:type topology-initial-status}
-                                  (storm-conf TOPOLOGY-WORKERS)
+                                  (storm-conf TOPOLOGY-WORKERS) ;;topology自己的conf
                                   num-executors))))
 
 ;; Master:
@@ -890,15 +892,15 @@
   )
 )
 
-(defserverfn service-handler [conf inimbus]
-  (.prepare inimbus conf (master-inimbus-dir conf))
+(defserverfn service-handler [conf inimbus]  
+  (.prepare inimbus conf (master-inimbus-dir conf)) ;;什么都没做
   (log-message "Starting Nimbus with conf " conf)
   (let [nimbus (nimbus-data conf inimbus)]
     (.prepare ^backtype.storm.nimbus.ITopologyValidator (:validator nimbus) conf)
     (cleanup-corrupt-topologies! nimbus)
     (doseq [storm-id (.active-storms (:storm-cluster-state nimbus))]
-      (transition! nimbus storm-id :startup))
-    (schedule-recurring (:timer nimbus)
+      (transition! nimbus storm-id :startup)) ;;启动所有的已有的topology
+    (schedule-recurring (:timer nimbus) ;;启动一个线程监控，轮询是否有task挂了，然后会重新分配   TODO 后续再细看错误恢复
                         0
                         (conf NIMBUS-MONITOR-FREQ-SECS)
                         (fn []
@@ -908,7 +910,7 @@
                           (do-cleanup nimbus)
                           ))
     ;; Schedule Nimbus inbox cleaner
-    (schedule-recurring (:timer nimbus)
+    (schedule-recurring (:timer nimbus)  ;;启动一个线程，清理nimbus上无用的topology资源。
                         0
                         (conf NIMBUS-CLEANUP-INBOX-FREQ-SECS)
                         (fn []
@@ -1145,6 +1147,7 @@
       (waiting? [this]
         (timer-waiting? (:timer nimbus))))))
 
+;;conf是一个clojure的map结构
 (defn launch-server! [conf nimbus]
   (validate-distributed-mode! conf)
   (let [service-handler (service-handler conf nimbus)
@@ -1152,7 +1155,7 @@
                     (THsHaServer$Args.)
                     (.workerThreads 64)
                     (.protocolFactory (TBinaryProtocol$Factory. false true (conf NIMBUS-THRIFT-MAX-BUFFER-SIZE)))
-                    (.processor (Nimbus$Processor. service-handler))
+                    (.processor (Nimbus$Processor. service-handler))  ;; 构建thrift的处理器
                     )
        server (THsHaServer. (do (set! (. options maxReadBufferBytes)(conf NIMBUS-THRIFT-MAX-BUFFER-SIZE)) options))]
     (add-shutdown-hook-with-force-kill-in-1-sec (fn []
